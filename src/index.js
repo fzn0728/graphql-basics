@@ -20,20 +20,20 @@ const users_data = [{
 }]
 
 const posts_data = [{
-    id: '001',
+    id: '01',
     title:'How to learn GraphQL',
     body: 'Learning GraphQL contains abc step, step_1, step_2, step_3',
     published: true,
     author:'1'
 },{
-    id: '002',
+    id: '02',
     title:'How to learn Python',
     body: 'That is pretty easy...,',
     published: true,
     author:'1'
 },
 {
-    id: '003',
+    id: '03',
     title:'How to learn apollo',
     body: 'We will learn that later',
     published: false ,
@@ -44,19 +44,23 @@ const posts_data = [{
 const comments_data = [{
     id:'001',
     text:'That is pretty interesting',
-    author:'1'
+    author:'1',
+    posts:'01'
 },{
     id:'002',
     text:'OK, fine',
-    author:'1'
+    author:'1',
+    posts:'02'
 },{
     id:'003',
     text:'Could you tell me more about this?',
-    author:'2'
+    author:'2',
+    posts:'03'
 },{
     id:'004',
     text:'sth',
-    author: '3'
+    author: '3',
+    posts:'01'
 }]
 
 // Type definition (schema)
@@ -84,12 +88,14 @@ const typeDefs = `
         body: String!
         published: Boolean!
         author: User!
+        comments:[Comment!]!
     }
 
     type Comment {
         id: ID!
         text: String!
         author: User!
+        posts: Post!
     }
 `
 
@@ -146,6 +152,11 @@ const resolvers = {
             return users_data.find((user) =>{ // finle is for non-iterable filed, like single user String
                 return user.id === parent.author
              })
+        },
+        comments(parent, args, ctx, info){
+            return comments_data.filter((comment)=>{
+                return comment.posts === parent.id
+            })
         }
     },
 
@@ -166,6 +177,11 @@ const resolvers = {
         author(parent, args, ctx, info){
             return users_data.find((user) => {
                 return user.id === parent.author
+            })
+        },
+        posts(parent, args, ctx, info){
+            return posts_data.find((post)=>{
+                return post.id === parent.posts
             })
         }
     }
