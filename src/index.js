@@ -3,7 +3,7 @@ import {GraphQLServer} from 'graphql-yoga'
 // Scalar types - String, Boolean, Int, Float, ID 
 
 // Demo user data
-const users = [{
+const users_data = [{
     id: '1',
     name: 'fzn',
     email:'fzn@example.com',
@@ -19,7 +19,7 @@ const users = [{
     age: 19
 }]
 
-const posts = [{
+const posts_data = [{
     id: '001',
     title:'How to learn GraphQL',
     body: 'Learning GraphQL contains abc step, step_1, step_2, step_3',
@@ -41,6 +41,24 @@ const posts = [{
 }
 ]
 
+const comments_data = [{
+    id:'001',
+    text:'That is pretty interesting',
+    author:'1'
+},{
+    id:'002',
+    text:'OK, fine',
+    author:'1'
+},{
+    id:'003',
+    text:'Could you tell me more about this?',
+    author:'2'
+},{
+    id:'004',
+    text:'sth',
+    author: '3'
+}]
+
 // Type definition (schema)
 const typeDefs = `
     type Query {
@@ -48,6 +66,7 @@ const typeDefs = `
         posts(query: String): [Post!]!
         me: User!
         post: Post!
+        comments: [Comment!]!
     }
 
     type User {
@@ -55,6 +74,8 @@ const typeDefs = `
         name: String!
         email: String!
         age: Int
+        posts: [Post!]!
+        comments:[Comment!]!
     }
 
     type Post {
@@ -64,6 +85,12 @@ const typeDefs = `
         published: Boolean!
         author: User!
     }
+
+    type Comment {
+        id: ID!
+        text: String!
+        author: User!
+    }
 `
 
 // Resolvers
@@ -71,24 +98,28 @@ const resolvers = {
     Query: {
         users(parent, args, ctx, info){
             if (!args.query) {
-                return users
+                return users_data
             }
 
-            return users.filter((user)=> {
+            return users_data.filter((user)=> {
                 return user.name.toLowerCase().includes(args.query.toLowerCase())
             })
         },
 
         posts(parent, args, ctx, info) {
             if (!args.query){
-                return posts
+                return posts_data
             }
 
-            return posts.filter((xyz)=> {
+            return posts_data.filter((xyz)=> {
                 const isTitleMatch =  xyz.title.toLowerCase().includes(args.query.toLowerCase())
                 const isBodyMatch =  xyz.body.toLowerCase().includes(args.query.toLowerCase())
                 return isTitleMatch || isBodyMatch
             })
+        },
+
+        comments(parent, args, ctx, info){
+            return comments_data
         },
 
         me() {
@@ -112,11 +143,34 @@ const resolvers = {
 
     Post:{
         author(parent, args, ctx, info){
-            return users.find((user) =>{
+            return users_data.find((user) =>{ // finle is for non-iterable filed, like single user String
                 return user.id === parent.author
              })
         }
+    },
+
+    User: {
+        posts(parent, args, ctx, info){
+            return posts_data.filter((post)=>{
+                return post.author === parent.id
+            })
+        },
+        comments(parent, args, ctx, info){
+            return comments_data.filter((comment)=>{ // filter is for iterable field, like array []
+                return comment.author === parent.id
+            })
+        }
+    },
+
+    Comment: {
+        author(parent, args, ctx, info){
+            return users_data.find((user) => {
+                return user.id === parent.author
+            })
+        }
     }
+
+
 
 }
 
