@@ -45,23 +45,23 @@ const posts_data = [{
 const comments_data = [{
     id:'001',
     text:'That is pretty interesting',
-    author:'1',
-    posts:'01'
+    author_id:'1',
+    post_id:'01'
 },{
     id:'002',
     text:'OK, fine',
-    author:'1',
-    posts:'02'
+    author_id:'1',
+    post_id:'02'
 },{
     id:'003',
     text:'Could you tell me more about this?',
-    author:'2',
-    posts:'03'
+    author_id:'2',
+    post_id:'03'
 },{
     id:'004',
     text:'sth',
-    author: '3',
-    posts:'01'
+    author_id: '3',
+    post_id:'01'
 }]
 
 // Type definition (schema)
@@ -76,6 +76,8 @@ const typeDefs = `
 
     type Mutation {
         createUser(name: String!, email: String!, age:Int): User!
+        createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
+        createComment(text:String!, author_id: ID!, post_id: ID!): Comment!
     }
 
     type User {
@@ -100,7 +102,7 @@ const typeDefs = `
         id: ID!
         text: String!
         author: User!
-        posts: Post!
+        post: Post!
     }
 `
 
@@ -163,14 +165,48 @@ const resolvers = {
 
             const user = {
                 id: uuidv4(),
-                name: args.name,
-                email: args.email,
-                age:args.age
+                ...args
             }
 
             users_data.push(user)
 
             return user
+        },
+
+        createPost(parent, args, ctx, info){
+            const userExists = users_data.some((user)=>{
+                return user.id === args.author
+            })
+            if (!userExists) {
+                throw new Error('User not found')
+            }
+
+            const post = {
+                id: uuidv4(), 
+                ...args
+            }
+
+            posts_data.push(post)
+            return post
+        },
+
+        createComment(parent, args, ctx, info){
+            const userExists = users_data.some((user)=> user.id === args.author_id )
+            const postExists = posts_data.some((post)=> post.id === args.post_id && post.published)
+
+            if (!userExists || !postExists) {
+                throw new Error('Not able to find user and post')
+            }
+
+            const comment = {
+                id: uuidv4(),
+                text: args.text,
+                author_id: args.author_id,
+                post_id: args.post_id
+            }
+
+            comments_data.push(comment)
+            return comment
         }
     },
 
@@ -182,7 +218,7 @@ const resolvers = {
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{
-                return comment.posts === parent.id
+                return comment.post_id === parent.id
             })
         }
     },
@@ -195,7 +231,7 @@ const resolvers = {
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{ // filter is for iterable field, like array []
-                return comment.author === parent.id
+                return comment.author_id === parent.id
             })
         }
     },
@@ -203,12 +239,12 @@ const resolvers = {
     Comment: {
         author(parent, args, ctx, info){
             return users_data.find((user) => {
-                return user.id === parent.author
+                return user.id === parent.author_id
             })
         },
-        posts(parent, args, ctx, info){
+        post(parent, args, ctx, info){
             return posts_data.find((post)=>{
-                return post.id === parent.posts
+                return post.id === parent.post_id
             })
         }
     }
