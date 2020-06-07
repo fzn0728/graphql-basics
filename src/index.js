@@ -75,9 +75,28 @@ const typeDefs = `
     }
 
     type Mutation {
-        createUser(name: String!, email: String!, age:Int): User!
-        createPost(title: String!, body: String!, published: Boolean!, author: ID!): Post!
-        createComment(text:String!, author_id: ID!, post_id: ID!): Comment!
+        createUser(data: CreateUserInput): User!
+        createPost(data: CreatePostInput): Post!
+        createComment(data: CreateCommentInput): Comment!
+    }
+
+    input CreateUserInput {
+        name: String!
+        email: String!
+        age: Int
+    }
+
+    input CreatePostInput {
+        title: String!
+        body: String!
+        published: Boolean!
+        author: ID!
+    }
+
+    input CreateCommentInput {
+        text: String!
+        author_id: ID!
+        post_id: ID!
     }
 
     type User {
@@ -157,7 +176,7 @@ const resolvers = {
     Mutation: {
         createUser(parent, args, ctx, info){
             const emailTaken = users_data.some((user) => {
-                return user.email === args.email
+                return user.email === args.data.email
             })
             if (emailTaken){
                 throw new Error('Email taken.')
@@ -165,7 +184,7 @@ const resolvers = {
 
             const user = {
                 id: uuidv4(),
-                ...args
+                ...args.data
             }
 
             users_data.push(user)
@@ -175,7 +194,7 @@ const resolvers = {
 
         createPost(parent, args, ctx, info){
             const userExists = users_data.some((user)=>{
-                return user.id === args.author
+                return user.id === args.data.author
             })
             if (!userExists) {
                 throw new Error('User not found')
@@ -183,7 +202,7 @@ const resolvers = {
 
             const post = {
                 id: uuidv4(), 
-                ...args
+                ...args.data
             }
 
             posts_data.push(post)
@@ -191,8 +210,8 @@ const resolvers = {
         },
 
         createComment(parent, args, ctx, info){
-            const userExists = users_data.some((user)=> user.id === args.author_id )
-            const postExists = posts_data.some((post)=> post.id === args.post_id && post.published)
+            const userExists = users_data.some((user)=> user.id === args.data.author_id )
+            const postExists = posts_data.some((post)=> post.id === args.data.post_id && post.published)
 
             if (!userExists || !postExists) {
                 throw new Error('Not able to find user and post')
@@ -200,9 +219,9 @@ const resolvers = {
 
             const comment = {
                 id: uuidv4(),
-                text: args.text,
-                author_id: args.author_id,
-                post_id: args.post_id
+                text: args.data.text,
+                author_id: args.data.author_id,
+                post_id: args.data.post_id
             }
 
             comments_data.push(comment)
@@ -213,12 +232,12 @@ const resolvers = {
     Post:{
         author(parent, args, ctx, info){
             return users_data.find((user) =>{ // finle is for non-iterable filed, like single user String
-                return user.id === parent.author
+                return user.id === parent.data.author
              })
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{
-                return comment.post_id === parent.id
+                return comment.post_id === parent.data.id
             })
         }
     },
@@ -226,12 +245,12 @@ const resolvers = {
     User: {
         posts(parent, args, ctx, info){
             return posts_data.filter((post)=>{
-                return post.author === parent.id
+                return post.author === parent.data.id
             })
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{ // filter is for iterable field, like array []
-                return comment.author_id === parent.id
+                return comment.author_id === parent.data.id
             })
         }
     },
