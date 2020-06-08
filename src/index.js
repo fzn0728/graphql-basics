@@ -4,7 +4,7 @@ import uuidv4 from 'uuid/v4'
 // Scalar types - String, Boolean, Int, Float, ID 
 
 // Demo user data
-const users_data = [{
+let users_data = [{
     id: '1',
     name: 'fzn',
     email:'fzn@example.com',
@@ -20,7 +20,7 @@ const users_data = [{
     age: 19
 }]
 
-const posts_data = [{
+let posts_data = [{
     id: '01',
     title:'How to learn GraphQL',
     body: 'Learning GraphQL contains abc step, step_1, step_2, step_3',
@@ -42,16 +42,16 @@ const posts_data = [{
 }
 ]
 
-const comments_data = [{
+let comments_data = [{
     id:'001',
     text:'That is pretty interesting',
-    author_id:'1',
+    author_id:'3',
     post_id:'01'
 },{
     id:'002',
     text:'OK, fine',
     author_id:'1',
-    post_id:'02'
+    post_id:'03'
 },{
     id:'003',
     text:'Could you tell me more about this?',
@@ -76,7 +76,9 @@ const typeDefs = `
 
     type Mutation {
         createUser(data: CreateUserInput): User!
+        deleteUser(id: ID!): User!
         createPost(data: CreatePostInput): Post!
+        deletePost(id:ID!): Post!
         createComment(data: CreateCommentInput): Comment!
     }
 
@@ -192,6 +194,47 @@ const resolvers = {
             return user
         },
 
+        deleteUser(parent, args, ctx, info){
+            const userIndex = users_data.findIndex((user)=> user.id==args.id)
+
+            if (userIndex===-1){
+                throw new Error('User not Found')
+            }
+
+            // if we find user to delete, we should delete both user but attached comment and post
+            const deletedUser = users_data.splice(userIndex, 1)
+
+            posts_data = posts_data.filter((post)=>{
+                const match = post.author === args.id
+                
+                if (match) {
+                    comments_data = comments_data.filter((comment)=> comment.post_id !== post.id
+                    )
+                }
+                return !match
+            })
+
+            comments_data = comments_data.filter((comment)=> comment.author_id !== args.id)
+
+            // console.log(comments_data)
+
+            return deletedUser[0]
+        },
+
+        deletePost(parent, args, ctx, info) {
+            const postIndex = posts_data.findIndex((post)=> post.id===args.id)
+
+            if (postIndex===-1){
+                throw new Error('Post not found')
+            }
+
+            const deletedPost = posts_data.splice(postIndex,1)
+
+            comments_data = comments_data.filter((comment)=> comment.post_id!==post.id)
+
+            return deletedPost[0]
+        },
+
         createPost(parent, args, ctx, info){
             const userExists = users_data.some((user)=>{
                 return user.id === args.data.author
@@ -232,12 +275,12 @@ const resolvers = {
     Post:{
         author(parent, args, ctx, info){
             return users_data.find((user) =>{ // finle is for non-iterable filed, like single user String
-                return user.id === parent.data.author
+                return user.id === parent.author
              })
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{
-                return comment.post_id === parent.data.id
+                return comment.post_id === parent.id
             })
         }
     },
@@ -245,12 +288,12 @@ const resolvers = {
     User: {
         posts(parent, args, ctx, info){
             return posts_data.filter((post)=>{
-                return post.author === parent.data.id
+                return post.author === parent.id
             })
         },
         comments(parent, args, ctx, info){
             return comments_data.filter((comment)=>{ // filter is for iterable field, like array []
-                return comment.author_id === parent.data.id
+                return comment.author_id === parent.id
             })
         }
     },
