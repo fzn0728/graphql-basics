@@ -95,7 +95,7 @@ const Mutation = {
         db.posts_data.push(post)
 
         if (args.data.published) {
-            pubsub.publish('post', { 
+            pubsub.publish('post', {  // make sure the channel name is the same as resolver definition
                 post:{
                     mutation: 'CREATED',
                     data: post
@@ -127,9 +127,10 @@ const Mutation = {
         return post
     },
 
-    updatePost(parent, args, {db}, info){
+    updatePost(parent, args, { db, pubsub}, info){
         const {id,data} = args
         const post = db.posts_data.find((post)=> post.id === id)
+        const originalPost = {... post}
 
         if (!post) {
             throw new Error('Post not found')
@@ -145,6 +146,34 @@ const Mutation = {
 
         if (typeof data.published === 'boolean'){
             post.published = data.published
+        
+
+        if (originalPost.published && !post.published){
+            // deleted
+            pubsub.publish('post', {
+                post:{
+                    mutation: 'DELETED',
+                    data: originalPost
+                }
+            })
+        } else if (!originalPost.publish && post.published) {
+            // created
+            pubsub.publish('post', {
+                post: {
+                    mutation: 'CREATED',
+                    data: post
+                }
+            })
+        } 
+
+        }else if (post.published){
+            // updated
+            pubsub.publish('post', {
+                post: {
+                    mutation: 'UPDATED',
+                    data: post
+                }
+            })
         }
 
         return post
