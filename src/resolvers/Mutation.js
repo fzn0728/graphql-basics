@@ -1,4 +1,5 @@
 import uuidv4 from 'uuid/v4'
+import { PubSub } from 'graphql-yoga'
 
 const Mutation = {
     createUser(parent, args, {db}, info){
@@ -77,10 +78,11 @@ const Mutation = {
     },
 
 
-    createPost(parent, args, {db}, info){
+    createPost(parent, args, {db, pubsub}, info){
         const userExists = db.users_data.some((user)=>{
             return user.id === args.data.author
         })
+
         if (!userExists) {
             throw new Error('User not found')
         }
@@ -91,22 +93,38 @@ const Mutation = {
         }
 
         db.posts_data.push(post)
+
+        if (args.data.published) {
+            pubsub.publish('post', { 
+                post:{
+                    mutation: 'CREATED',
+                    data: post
+                } } )
+        }
+    
         return post
     },
 
     
-    deletePost(parent, args, {db}, info) {
+    deletePost(parent, args, { db, pubsub}, info) {
         const postIndex = db.posts_data.findIndex((post)=> post.id===args.id)
 
         if (postIndex===-1){
             throw new Error('Post not found')
         }
 
-        const deletedPost = db.posts_data.splice(postIndex,1)
+        const [post] = db.posts_data.splice(postIndex,1)
 
         db.comments_data = db.comments_data.filter((comment)=> comment.post_id!==args.id)
 
-        return deletedPost[0]
+        if (post.published){
+            pubsub.publish('post', {
+                post:{
+                mutation: "DELETED",
+                data: post}
+            })
+        }
+        return post
     },
 
     updatePost(parent, args, {db}, info){
@@ -133,7 +151,7 @@ const Mutation = {
     },
 
 
-    createComment(parent, args, {db}, info){
+    createComment(parent, args, { db, pubsub}, info){
         const userExists = db.users_data.some((user)=> user.id === args.data.author_id )
         const postExists = db.posts_data.some((post)=> post.id === args.data.post_id && post.published)
 
@@ -149,6 +167,7 @@ const Mutation = {
         }
 
         db.comments_data.push(comment)
+        pubsub.publish(`comment ${args.data.post_id}`, { comment })
         return comment
     },
 
