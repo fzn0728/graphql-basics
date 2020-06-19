@@ -51,7 +51,7 @@ const comments_data = [{
     id:'003',
     text:'Could you tell me more about this?',
     author_id:'2',
-    post_id:'03'
+    post_id:'02'
 },{
     id:'004',
     text:`OK, that's cool`,
