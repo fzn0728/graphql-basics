@@ -1,6 +1,6 @@
 const Post = {
     author(parent, args, {db}, info){
-        return db.users_data.find((user) =>{ // finle is for non-iterable filed, like single user String
+        return db.users_data.find((user) =>{ // find is for non-iterable field, like single user String
             return user.id === parent.author
          })
     },
